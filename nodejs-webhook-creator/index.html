@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Endpoint Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+
+    <div class="container mx-auto mt-10 p-5 bg-white rounded shadow-md">
+        <h1 class="text-2xl font-bold mb-4">Webhook Endpoint Builder</h1>
+
+        <form id="webhookForm" class="space-y-4">
+            <div>
+                <label for="existingWebhooks" class="block text-sm font-medium text-gray-700">Select Existing Webhook</label>
+                <select id="existingWebhooks" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">Select a webhook to clone</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="webhookName" class="block text-sm font-medium text-gray-700">Webhook Name</label>
+                <input type="text" id="webhookName" name="webhookName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label for="webhookPath" class="block text-sm font-medium text-gray-700">Webhook Path</label>
+                <input type="text" id="webhookPath" name="webhookPath" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="/your-webhook-path">
+            </div>
+
+            <div>
+                <label for="webhookHandler" class="block text-sm font-medium text-gray-700">Handler Function (JavaScript)</label>
+                <textarea id="webhookHandler" name="webhookHandler" rows="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="console.log('Webhook received');"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="saveWebhook()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Save Webhook</button>
+                <button type="button" onclick="deployWebhook()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Deploy Webhook</button>
+                <button type="button" onclick="openModal('apiModal')" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Generate with AI</button>
+                <button type="button" onclick="openModal('sendWebhookModal')" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">Send Webhook</button>
+            </div>
+        </form>
+
+        <div id="response" class="mt-4 p-4 bg-green-100 text-green-700 rounded hidden"></div>
+    </div>
+
+    <div id="apiModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('apiModal')">&times;</span>
+            <h2 class="text-xl font-bold mb-4">Enter OpenAI API Key and Prompt</h2>
+            <label for="apiKey" class="block text-sm font-medium text-gray-700">OpenAI API Key</label>
+            <input type="text" id="apiKey" name="apiKey" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-4">
+            <label for="modalPrompt" class="block text-sm font-medium text-gray-700">Prompt for ChatGPT</label>
+            <textarea id="modalPrompt" name="modalPrompt" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-4" placeholder="Describe the webhook you want to create..."></textarea>
+            <label for="model" class="block text-sm font-medium text-gray-700">Model</label>
+            <select id="model" name="model" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-4">
+                <option value="text-davinci-003">text-davinci-003</option>
+                <option value="text-davinci-002">text-davinci-002</option>
+                <option value="code-davinci-002">code-davinci-002</option>
+            </select>
+            <button type="button" onclick="generateWebhook()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Generate Webhook</button>
+        </div>
+    </div>
+
+    <div id="sendWebhookModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sendWebhookModal')">&times;</span>
+            <h2 class="text-xl font-bold mb-4">Send Webhook</h2>
+            <label for="sendWebhookUrl" class="block text-sm font-medium text-gray-700">Webhook URL</label>
+            <input type="text" id="sendWebhookUrl" name="sendWebhookUrl" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-4">
+            <label for="sendWebhookPayload" class="block text-sm font-medium text-gray-700">Payload (JSON)</label>
+            <textarea id="sendWebhookPayload" name="sendWebhookPayload" rows="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-4" placeholder='{"key": "value"}'></textarea>
+            <button type="button" onclick="sendWebhook()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Send Webhook</button>
+        </div>
+    </div>
+
+    <script>
+        let webhooks = [];
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        async function fetchWebhooks() {
+            try {
+                const response = await fetch('http://localhost:3000/webhooks');
+                webhooks = await response.json();
+                const webhookSelect = document.getElementById('existingWebhooks');
+                webhooks.forEach((webhook, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = webhook.name;
+                    webhookSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching webhooks:', error);
+            }
+        }
+
+        function updateFormWithWebhook(webhook) {
+            document.getElementById('webhookName').value = webhook.name;
+            document.getElementById('webhookPath').value = webhook.path;
+            document.getElementById('webhookHandler').value = webhook.handler;
+        }
+
+        document.getElementById('existingWebhooks').addEventListener('change', (event) => {
+            const selectedIndex = event.target.value;
+            if (selectedIndex !== '') {
+                updateFormWithWebhook(webhooks[selectedIndex]);
+            }
+        });
+
+        async function saveWebhook() {
+            const webhookName = document.getElementById('webhookName').value;
+            const webhookPath = document.getElementById('webhookPath').value;
+            const webhookHandler = document.getElementById('webhookHandler').value;
+
+            const newWebhook = {
+                name: webhookName,
+                path: webhookPath,
+                handler: webhookHandler
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/webhooks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newWebhook)
+                });
+
+                if (response.ok) {
+                    alert('Webhook saved successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed to save webhook');
+                }
+            } catch (error) {
+                console.error('Error saving webhook:', error);
+            }
+        }
+
+        async function deployWebhook() {
+            const webhookName = document.getElementById('webhookName').value;
+            const webhookPath = document.getElementById('webhookPath').value;
+            const webhookHandler = document.getElementById('webhookHandler').value;
+
+            const newWebhook = {
+                name: webhookName,
+                path: webhookPath,
+                handler: webhookHandler
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/webhooks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newWebhook)
+                });
+
+                if (response.ok) {
+                    alert('Webhook deployed successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed to deploy webhook');
+                }
+            } catch (error) {
+                console.error('Error deploying webhook:', error);
+            }
+        }
+
+        async function generateWebhook() {
+            const apiKey = document.getElementById('apiKey').value;
+            const prompt = document.getElementById('modalPrompt').value;
+            const model = document.getElementById('model').value;
+
+            if (!apiKey || !prompt || !model) {
+                alert('Please provide OpenAI API key, prompt, and model.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/generate-webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        apiKey,
+                        prompt,
+                        model
+                    })
+                });
+
+                if (response.ok) {
+                    const webhook = await response.json();
+                    document.getElementById('webhookName').value = webhook.name;
+                    document.getElementById('webhookPath').value = webhook.path;
+                    document.getElementById('webhookHandler').value = webhook.handler;
+
+                    document.getElementById('generatedWebhookForm').classList.remove('hidden');
+                    closeModal('apiModal');
+                } else {
+                    alert('Failed to generate webhook');
+                }
+            } catch (error) {
+                console.error('Error generating webhook:', error);
+            }
+        }
+
+        async function sendWebhook() {
+            const url = document.getElementById('sendWebhookUrl').value;
+            const payload = document.getElementById('sendWebhookPayload').value;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: payload
+                });
+
+                if (response.ok) {
+                    alert('Webhook sent successfully!');
+                    closeModal('sendWebhookModal');
+                } else {
+                    alert('Failed to send webhook');
+                }
+            } catch (error) {
+                console.error('Error sending webhook:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchWebhooks);
+    </script>
+</body>
+
+</html>

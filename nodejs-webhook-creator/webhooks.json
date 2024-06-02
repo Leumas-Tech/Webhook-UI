@@ -1,0 +1,12 @@
+[
+  {
+    "name": "demo",
+    "path": "/demo/test/:word",
+    "handler": "const word = req.params.word\nconsole.log(\"the word is : \" , word);"
+  },
+  {
+    "name": "demo",
+    "path": "/demo/test/:word",
+    "handler": "const word = req.params.word\nconsole.log(\"the word is : \" , word);"
+  }
+]
